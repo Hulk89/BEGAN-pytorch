@@ -114,7 +114,7 @@ if __name__=='__main__':
                 k = max(min(k, 1), 0)
                 M_global = real_loss.data[0] + abs(gamma*real_loss.data[0] - fake_loss.data[0])
     
-                if i % 100 == 0:
+                if i % 1000 == 0:
                     print(M_global, flush=True)
                     step = epoch* 100000000 + i
                     writer.add_scalar('information/M_global', M_global, step)

@@ -7,8 +7,8 @@ def get_loader(root_folder,
                num_workers=4):
     dataset = dset.ImageFolder(root=root_folder,
                                transform=transforms.Compose([
+                                   transforms.CenterCrop(160),
                                    transforms.Scale(64),
-                                   transforms.CenterCrop(64),
                                    transforms.ToTensor(),
                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                ]))

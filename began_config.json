@@ -4,6 +4,8 @@
              "channels": 3},
     "train":{"lambda": 0.001,
              "lr":     0.00001,
+             "beta1":  0.9,
+             "beta2":  0.999,
              "epoch":  1,
              "iter":   300000,
              "gamma":  0.5}

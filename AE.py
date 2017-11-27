@@ -9,6 +9,10 @@ class BasicBlock(nn.Module):
                               out_channel,
                               3,
                               padding=1)  # for same size
+		# convolutional layer init...
+        self.conv.weight.data.normal_(0.0, 0.02)
+        self.conv.bias.data.fill_(0)
+
         self.norm = nn.InstanceNorm2d(out_channel)
         self.elu = nn.ELU(inplace=True)
         self.same_channel = in_channel == out_channel
@@ -61,6 +65,9 @@ class Encoder(nn.Module):
                                          inout_channels[1]))
         self.convs = nn.ModuleList(layers)
         self.ff = nn.Linear(8*8*4*n, h)
+        # FFN initialize..
+        self.ff.weight.data.normal_(0.0, 0.02)
+        self.ff.bias.data.fill_(0)
 
     def forward(self, x):
         res = x
@@ -86,6 +93,7 @@ class Decoder(nn.Module):
         upsampling_layer = [1, 3, 5]
         self.convs = []
         self.n = n
+        #self.act = nn.Tanh()
 
         layers = []
         for i, inout_channels in enumerate(inout_channels):
@@ -98,6 +106,8 @@ class Decoder(nn.Module):
                                          inout_channels[0]))
         self.convs = nn.ModuleList(layers)
         self.ff = nn.Linear(h, 8*8*4*n)
+        self.ff.weight.data.normal_(0.0, 0.02)
+        self.ff.bias.data.fill_(0)
 
     def forward(self, x):
         res = self.ff(x)
@@ -105,7 +115,7 @@ class Decoder(nn.Module):
 
         for conv in self.convs:
             res = conv(res)
-        
+        #res = self.act(res)  # -1~1까지만...
         return res
 
 
