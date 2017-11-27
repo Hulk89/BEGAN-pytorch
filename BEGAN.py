@@ -55,11 +55,13 @@ if __name__=='__main__':
     num_iter    = config['train']['iter']
     num_epoch   = config['train']['epoch']
     gamma       = config['train']['gamma']
+    beta1       = config['train']['beta1']
+    beta2       = config['train']['beta2']
 
     k = 0.0
     #TODO beta
-    d_optimizer = optim.Adam(d.parameters(), lr=d_lr)
-    g_optimizer = optim.Adam(g.parameters(), lr=g_lr)
+    d_optimizer = optim.Adam(d.parameters(), lr=d_lr, betas=(beta1, beta2))
+    g_optimizer = optim.Adam(g.parameters(), lr=g_lr, betas=(beta1, beta2))
 
     d_scheduler = optim.lr_scheduler.StepLR(d_optimizer, 100, 0.98)
     g_scheduler = optim.lr_scheduler.StepLR(g_optimizer, 100, 0.98)
@@ -75,15 +77,14 @@ if __name__=='__main__':
                 g_scheduler.step()
 
                 ### Discriminator Training ###
-                d_optimizer.zero_grad()
-                g_optimizer.zero_grad()
+                d.zero_grad()
+                g.zero_grad()
                 # 1. real image
                 real_img = Variable(data[0].cuda())
                 restored_real_img = d(real_img)
                 # 2. fake image loss
-                noise = (torch.rand(config['model']['h']*args.batch_size) - 0.5)*2
+                noise = (torch.rand(args.batch_size, config['model']['h']) - 0.5)*2
                 z = Variable(noise).cuda()
-                z = z.view(args.batch_size, -1)
                 fake_img = g(z).detach()  # Generator에 대해서는 학습하면 안된다.
                 restored_fake_img = d(fake_img)
 
@@ -96,12 +97,11 @@ if __name__=='__main__':
                 d_optimizer.step()
 
                 ### Generator Training ###
-                d_optimizer.zero_grad()
-                g_optimizer.zero_grad()
+                d.zero_grad()
+                g.zero_grad()
                 
-                noise = (torch.rand(config['model']['h']*args.batch_size) - 0.5)*2
+                noise = (torch.rand(args.batch_size, config['model']['h']) - 0.5)*2
                 z = Variable(noise).cuda()
-                z = z.view(args.batch_size, -1)
                 fake_img = g(z)
                 restored_fake_img = d(fake_img).detach()  # 역시 discriminator는 학습하면 안된다.
                 loss_G = loss_func(fake_img, restored_fake_img)
@@ -111,17 +111,20 @@ if __name__=='__main__':
 
                 ### compute others ###
                 k = k + lambda_*(gamma*real_loss.data[0] - fake_loss.data[0])
+                k = max(min(k, 1), 0)
                 M_global = real_loss.data[0] + abs(gamma*real_loss.data[0] - fake_loss.data[0])
     
-                if i % 1000 == 0:
+                if i % 100 == 0:
                     print(M_global, flush=True)
                     step = epoch* 100000000 + i
                     writer.add_scalar('information/M_global', M_global, step)
+                    writer.add_scalar('information/k', k, step)
                     writer.add_scalar('information/real_loss', real_loss.data[0], step)
                     writer.add_scalar('information/fake_loss', fake_loss.data[0], step)
-                    writer.add_image('Img/Real_image', (real_img+1)/2, step)
-                    writer.add_image('Img/Restored_real_image', (restored_real_img+1)/2, step) 
-                    writer.add_image('Img/fake_image', (fake_img+1)/2, step)
+                    writer.add_image('RealImg/image', (real_img+1)/2, step)
+                    writer.add_image('RealImg/restored', (restored_real_img+1)/2, step) 
+                    writer.add_image('FakeImg/image', (fake_img+1)/2, step)
+                    writer.add_image('FakeImg/restored', (restored_fake_img+1)/2, step)
                 if num_iter != -1 and i == num_iter:
                     raise StopIteration
     except StopIteration:
