@@ -2,24 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class LayerNorm(nn.Module):
-    def __init__(self, *args, **kwargs):
-        '''
-        dim: model의 internal dimension.
-        '''
-        self.dim = kwargs.pop('dim')
-        super(LayerNorm, self).__init__(*args, **kwargs)
-
-        self.beta  = nn.Linear(self.dim, 1)
-        self.gamma = nn.Linear(self.dim, 1)
-        self.epsilon = 1E-12
-    
-    def forward(self, x):
-        mean, var = x.mean(-1), x.var(-1)
-        normalized = (x - mean) / ((var + self.epsilon) ** 0.5)
-        return self.gamma * normalized + beta
-
-
 class BasicBlock(nn.Module):
     def __init__(self, in_channel, out_channel):
         super(BasicBlock, self).__init__()
@@ -27,17 +9,17 @@ class BasicBlock(nn.Module):
                               out_channel,
                               3,
                               padding=1)  # for same size
+        self.norm = nn.InstanceNorm2d(out_channel)
         self.elu = nn.ELU(inplace=True)
-        if in_channel == out_channel:
-            self.res = True
-        else:
-            self.res = False
+        self.same_channel = in_channel == out_channel
 
     def forward(self, x):
         y = self.conv(x)
+        if self.same_channel:
+            y = self.norm(y)
         y = self.elu(y)
 
-        if self.res:
+        if self.same_channel:
             return y + x
         else:
             return y
@@ -79,6 +61,7 @@ class Encoder(nn.Module):
                                          inout_channels[1]))
         self.convs = nn.ModuleList(layers)
         self.ff = nn.Linear(8*8*4*n, h)
+
     def forward(self, x):
         res = x
         for conv in self.convs:
@@ -103,7 +86,7 @@ class Decoder(nn.Module):
         upsampling_layer = [1, 3, 5]
         self.convs = []
         self.n = n
-# TODO explicit dimension for layer_norm
+
         layers = []
         for i, inout_channels in enumerate(inout_channels):
             if i in upsampling_layer:
@@ -124,6 +107,7 @@ class Decoder(nn.Module):
             res = conv(res)
         
         return res
+
 
 class AutoEncoder(nn.Module):
     def __init__(self, *args, **kwargs):
