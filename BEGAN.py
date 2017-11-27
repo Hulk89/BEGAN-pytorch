@@ -71,8 +71,9 @@ if __name__=='__main__':
     # tensorboardX
     writer = SummaryWriter()
     try:
+        i = 0
         for epoch in range(num_epoch):
-            for i, data in enumerate(loader):
+            for data in loader:
                 d_scheduler.step()
                 g_scheduler.step()
 
@@ -125,6 +126,7 @@ if __name__=='__main__':
                     writer.add_image('FakeImg/restored', (restored_fake_img+1)/2, step)
                 if num_iter != -1 and i == num_iter:
                     raise StopIteration
+                i += 1 
     except StopIteration:
         pass
     writer.close()
