@@ -78,14 +78,13 @@ if __name__=='__main__':
 
                 ### Discriminator Training ###
                 d.zero_grad()
-                g.zero_grad()
                 # 1. real image
                 real_img = Variable(data[0].cuda())
                 restored_real_img = d(real_img)
                 # 2. fake image loss
                 noise = (torch.rand(args.batch_size, config['model']['h']) - 0.5)*2
                 z = Variable(noise).cuda()
-                fake_img = g(z).detach()  # Generator에 대해서는 학습하면 안된다.
+                fake_img = g(z).detach()  # Generator에 대해서는 학습하면 안된다. 이미 optimizer에서 학습할 파라미터를 정해주지만, 계산을 빨리 하기위해 이런다.
                 restored_fake_img = d(fake_img)
 
                 fake_loss = loss_func(fake_img, restored_fake_img)
@@ -97,13 +96,12 @@ if __name__=='__main__':
                 d_optimizer.step()
 
                 ### Generator Training ###
-                d.zero_grad()
                 g.zero_grad()
                 
                 noise = (torch.rand(args.batch_size, config['model']['h']) - 0.5)*2
                 z = Variable(noise).cuda()
                 fake_img = g(z)
-                restored_fake_img = d(fake_img).detach()  # 역시 discriminator는 학습하면 안된다.
+                restored_fake_img = d(fake_img)  #여기는 detach하면 backpropagation이 안흐를 듯!
                 loss_G = loss_func(fake_img, restored_fake_img)
                 loss_G.backward()
                 
