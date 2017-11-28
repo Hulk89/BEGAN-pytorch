@@ -7,6 +7,7 @@ from torch.autograd import Variable
 import argparse
 import json
 from tensorboardX import SummaryWriter
+import os
 
 from image_loader import get_loader
 from AE import AutoEncoder, Decoder
@@ -21,8 +22,13 @@ if __name__=='__main__':
                         type=int, help='number of workers for data loader')
     parser.add_argument('--config', dest='config', default='began_config.json',
                         type=str, help='config file for BEGAN')
+    parser.add_argument('--g', dest='netG', default='',
+                        type=str, help='load Generative network')
+    parser.add_argument('--d', dest='netD', default='',
+                        type=str, help='load Discriminative network')
+    parser.add_argument('--out', dest='outf', default='output',
+                        type=str, help='output folder')
     args = parser.parse_args()
-
 
     # dataloader setting
     loader = get_loader(args.datapath, args.batch_size, args.num_workers)
@@ -45,10 +51,14 @@ if __name__=='__main__':
     g = Decoder(channel=config['model']['channels'],
                 n=config['model']['N'],
                 h=config['model']['h'])
+    # load Network
+    if args.netD != '':
+        d.load_state_dict(torch.load(args.netD))
+    if args.netG != '':
+        g.load_state_dict(torch.load(args.netG))
 
     d.cuda()
     g.cuda()
-    print(g)
     # hparams 
     lambda_     = config['train']['lambda']
     g_lr = d_lr = config['train']['lr']
@@ -70,6 +80,9 @@ if __name__=='__main__':
         return torch.mean(torch.abs(i-o))
     # tensorboardX
     writer = SummaryWriter()
+    # make Directory
+    if not os.path.exists(args.outf):
+        os.makedirs(args.outf)
     try:
         for epoch in range(num_epoch):
             for i, data in enumerate(loader):
@@ -123,6 +136,9 @@ if __name__=='__main__':
                     writer.add_image('RealImg/restored', (restored_real_img+1)/2, step) 
                     writer.add_image('FakeImg/image', (fake_img+1)/2, step)
                     writer.add_image('FakeImg/restored', (restored_fake_img+1)/2, step)
+                    # save model
+                    torch.save(g.state_dict(), '%s/netG_epoch_%d.pth' % (args.outf, step))
+                    torch.save(d.state_dict(), '%s/netD_epoch_%d.pth' % (args.outf, step))
                 if num_iter != -1 and step == num_iter:
                     raise StopIteration
     except StopIteration:
