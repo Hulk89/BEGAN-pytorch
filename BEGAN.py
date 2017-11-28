@@ -71,9 +71,9 @@ if __name__=='__main__':
     # tensorboardX
     writer = SummaryWriter()
     try:
-        i = 0
         for epoch in range(num_epoch):
-            for data in loader:
+            for i, data in enumerate(loader):
+                step = epoch * len(loader) + i
                 d_scheduler.step()
                 g_scheduler.step()
 
@@ -113,9 +113,8 @@ if __name__=='__main__':
                 k = max(min(k, 1), 0)
                 M_global = real_loss.data[0] + abs(gamma*real_loss.data[0] - fake_loss.data[0])
     
-                if i % 1000 == 0:
+                if step % 1000 == 0:
                     print(M_global, flush=True)
-                    step = epoch* 100000000 + i
                     writer.add_scalar('information/M_global', M_global, step)
                     writer.add_scalar('information/k', k, step)
                     writer.add_scalar('information/real_loss', real_loss.data[0], step)
@@ -124,9 +123,8 @@ if __name__=='__main__':
                     writer.add_image('RealImg/restored', (restored_real_img+1)/2, step) 
                     writer.add_image('FakeImg/image', (fake_img+1)/2, step)
                     writer.add_image('FakeImg/restored', (restored_fake_img+1)/2, step)
-                if num_iter != -1 and i == num_iter:
+                if num_iter != -1 and step == num_iter:
                     raise StopIteration
-                i += 1 
     except StopIteration:
         pass
     writer.close()
